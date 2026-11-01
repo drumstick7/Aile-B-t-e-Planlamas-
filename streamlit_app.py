@@ -162,6 +162,8 @@ def valid_password(password):
     return isinstance(password,str) and len(password)>=16 and 'BURAYA_' not in password and not password.isspace()
 
 import json
+import logging
+import re
 import socket
 import urllib.error
 import urllib.request
@@ -185,8 +187,15 @@ class SupabaseStore:
         try:
             with urllib.request.urlopen(req,timeout=15) as response: return json.load(response)
         except urllib.error.HTTPError as exc:
+            try:
+                error_code=str(json.load(exc).get('code','unknown'))
+            except (ValueError,AttributeError):
+                error_code='unknown'
+            safe_code=error_code if re.fullmatch(r'[A-Za-z0-9_]{1,40}',error_code) else 'unknown'
+            logging.getLogger('aile_butcesi').warning('Budget RPC %s failed: HTTP %s, code %s',name,exc.code,safe_code)
             raise BudgetError('Veritabanına erişilemiyor. Bağlantı ayarlarını ve SQL kurulumunu kontrol edin.',503) from None
-        except (urllib.error.URLError,TimeoutError,socket.timeout):
+        except (urllib.error.URLError,TimeoutError,socket.timeout) as exc:
+            logging.getLogger('aile_butcesi').warning('Budget RPC %s connection failed: %s',name,type(getattr(exc,'reason',exc)).__name__)
             raise BudgetError('Veritabanından yanıt alınamadı. Kaydetme sonucu doğrulanmadı; güncel kaydı kontrol edin.',503) from None
 
     def snapshot(self):
