@@ -176,6 +176,8 @@ class SupabaseStore:
         if parsed.scheme!='https' or not parsed.hostname or not parsed.hostname.endswith('.supabase.co') or parsed.path not in ('','/'):
             raise BudgetError('Supabase proje adresini kontrol edin',503)
         if not isinstance(key,str) or len(key)<30: raise BudgetError('Supabase sunucu anahtarı eksik',503)
+        if key.startswith('sb_publishable_'):
+            raise BudgetError('SUPABASE_SERVICE_KEY alanına Secret keys bölümündeki sb_secret_ anahtarı eklenmeli. Publishable key ortak bütçeyi okuyamaz.',503)
         self.url=url.rstrip('/')
         self.key=key
 
